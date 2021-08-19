@@ -45,5 +45,15 @@ int main(void) {
     double res = likelihood(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
     printf("res = %f\n", res);
     
+    // free memory
+    free(iniProb);
+    free(seqObs);
+    for (int t = 0; t < Nstate; t++) {
+        free(A[t]);
+        free(B[t]);
+    }
+    free(A);
+    free(B);
+    
     return 0;
 }
