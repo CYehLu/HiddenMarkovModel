@@ -11,49 +11,26 @@
 
 int main(void) {   
     // observation sequence
-    int* seqObs;
-    seqObs = malloc(Nseq * sizeof(int));
-    seqObs[0] = 2;
-    seqObs[1] = 0;
-    seqObs[2] = 2;
+    int seqObs[Nseq] = {2, 0, 2};
     
     // initial probability
-    double* iniProb;
-    iniProb = malloc(Nstate * sizeof(double));
-    iniProb[0] = log(0.8);
-    iniProb[1] = log(0.2);
+    double iniProb[Nstate] = {log(0.8), log(0.2)};
     
     // transition matrix
-    double** A;
-    A = malloc(Nstate * sizeof(double*));
-    for (int t = 0; t < Nstate; t++) {
-        A[t] = malloc(Nstate * sizeof(double));
-    }
-    A[0][0] = log(0.6);  A[0][1] = log(0.4);
-    A[1][0] = log(0.5);  A[1][1] = log(0.5);
+    double A[Nstate][Nstate] = {
+        {log(0.6), log(0.4)},
+        {log(0.5), log(0.5)}
+    };
     
     // emission matrix
-    double** B;
-    B = malloc(Nstate * sizeof(double*));
-    for (int t = 0; t < Nstate; t++) {
-        B[t] = malloc(Nobs * sizeof(double));
-    }
-    B[0][0] = log(0.2);  B[0][1] = log(0.4);  B[0][2] = log(0.4);
-    B[1][0] = log(0.5);  B[1][1] = log(0.4);  B[1][2] = log(0.1);
+    double B[Nstate][Nobs] = {
+        {log(0.2), log(0.4), log(0.4)},
+        {log(0.5), log(0.4), log(0.1)}
+    };
     
     // HMM: likelihood problem
     double res = likelihood(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
     printf("res = %f\n", res);
-    
-    // free memory
-    free(iniProb);
-    free(seqObs);
-    for (int t = 0; t < Nstate; t++) {
-        free(A[t]);
-        free(B[t]);
-    }
-    free(A);
-    free(B);
     
     return 0;
 }

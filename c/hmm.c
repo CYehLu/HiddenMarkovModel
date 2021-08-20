@@ -20,7 +20,7 @@ double mulProbLog(double logProb1, double logProb2) {
 }
 
 
-double likelihood(int Nstate, int Nseq, int Nobs, int* seqObs, double** A, double** B, double* iniProb) {
+double likelihood(int Nstate, int Nseq, int Nobs, int *seqObs, double (*A)[Nstate], double (*B)[Nobs], double *iniProb) {
     double alpha[Nstate][Nseq];
     
     // initial step
