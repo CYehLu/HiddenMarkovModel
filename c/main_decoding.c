@@ -1,4 +1,4 @@
-// gcc main_likelihood.c hmm.o -std=c99 -lm
+// gcc main_decoding.c hmm.o -std=c99 -lm
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,9 +30,15 @@ int main(void) {
     B[0][0] = log(0.2);  B[0][1] = log(0.4);  B[0][2] = log(0.4);
     B[1][0] = log(0.5);  B[1][1] = log(0.4);  B[1][2] = log(0.1);
     
-    // HMM: likelihood problem
-    double res = likelihood(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
-    printf("log-likelihood = %f\n", res);
+    // HMM: decoding problem
+    BestSeq res = decoding(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
+    
+    printf("max log-probability = %lf\n", res.bestProb);
+    printf("corresponding hidden state sequence:\n");
+    for (int t = 0; t < Nseq; t++) {
+        printf(" %d", res.bestSeq[t]);
+    }
+    printf("\n");
     
     return 0;
 }
