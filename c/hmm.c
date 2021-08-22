@@ -91,23 +91,22 @@ BestSeq decoding(int Nstate, int Nseq, int Nobs, int *seqObs, double **A, double
         }
     }
     
-    // termination step
-    double bestProb = v[0][Nseq-1];
-
+    // termination step    
     int *bestSeq = malloc(Nseq * sizeof(int));
-    bestSeq[Nseq-1] = backptr[0][Nseq-1];
+    bestSeq[Nseq-1] = 0;
+    double bestProb = v[0][Nseq-1];
     
     for (int s = 1; s < Nstate; s++) {
         if (v[s][Nseq-1] > bestProb) {
             bestProb = v[s][Nseq-1];
-            bestSeq[Nseq-1] = backptr[s][Nseq-1];
+            bestSeq[Nseq-1] = s;
         }
     }
     
     for (int t = Nseq-2; t >= 0; t--) {
         bestSeq[t] = backptr[bestSeq[t+1]][t+1];
     }
-    
+      
     BestSeq res = {bestProb, bestSeq};
     return res;
 }
