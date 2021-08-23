@@ -1,11 +1,15 @@
-EXES = likelihood decoding
+EXES = simulate likelihood decoding
+OBJS = hmm.o helper.o
 
 all : $(EXES)
 
-likelihood: main_likelihood.c hmm.o
+likelihood: main_likelihood.c $(OBJS)
 	gcc $^ -std=c99 -lm -o $@
 
-decoding: main_decoding.c hmm.o
+decoding: main_decoding.c $(OBJS)
+	gcc $^ -std=c99 -lm -o $@
+
+simulate: main_simulate.c $(OBJS)
 	gcc $^ -std=c99 -lm -o $@
 
 %.o: %.c %.h
@@ -13,4 +17,4 @@ decoding: main_decoding.c hmm.o
 
 .PHONY: clean
 clean:
-	rm hmm.o $(EXES)
+	rm $(OBJS) $(EXES)
