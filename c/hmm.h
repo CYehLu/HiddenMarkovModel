@@ -3,4 +3,5 @@
 int* simulate(int, int, int, double **, double **, double *);
 double likelihood(int, int, int, int *, double **, double **, double *);
 BestSeq decoding(int, int , int , int *, double **, double **, double *);
-HMM learning(int, int, int, int *, HMM, int, double);
+HMM learning(int, int, int, int *, HMM, int, double, int);
+HMM randomInitParams(int, int, int, int);

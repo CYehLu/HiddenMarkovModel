@@ -15,7 +15,7 @@ int *simulate(int Nstate, int Nseq, int Nobs, double **A, double **B, double *in
     All of the probabilities are not in log scale (differ from other functions).
     */
     
-    srand((unsigned)time(NULL));    // initialize `runif()`
+    srand((unsigned)time(NULL));    // initialize `sample()`
     
     int *seqObs = malloc(Nseq * sizeof(int));
     int *seqState = malloc(Nseq * sizeof(int));
@@ -97,7 +97,7 @@ BestSeq decoding(int Nstate, int Nseq, int Nobs, int *seqObs, double **A, double
 }
 
 
-HMM learning(int Nstate, int Nseq, int Nobs, int *seqObs, HMM firstGuess, int maxiter, double tol) {
+HMM learning(int Nstate, int Nseq, int Nobs, int *seqObs, HMM firstGuess, int maxiter, double tol, int verbose) {
     // initial value
     double *iniProb = firstGuess.iniProb;
     double **A = firstGuess.A;
@@ -120,62 +120,33 @@ HMM learning(int Nstate, int Nseq, int Nobs, int *seqObs, HMM firstGuess, int ma
     double prevScore = likelihood(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
     
     // iterations
+    
+    if (verbose == 1)
+        printf("\n   ================================================================  \n");
+    
     for (int iter = 0; iter < maxiter; iter++) {
-        printf("\n\n ********** iter = %d **********\n", iter);
-        
-        printf("parameters BEFORE updating:\n");
-        for (int i = 0; i < Nstate; i++) {
-            for (int j = 0; j < Nstate; j++) {
-                printf("  A[%d][%d] = %lf  ", i, j, exp(A[i][j]));
-            }
-            printf("\n");
-        }
-        for (int i = 0; i < Nstate; i++) {
-            for (int v = 0; v < Nobs; v++) {
-                printf("  B[%d][%d] = %lf  ", i, v, exp(B[i][v]));
-            }
-            printf("\n");
-        }
-        for (int i = 0; i < Nstate; i++) {
-            printf("  iniProb[%d] = %lf  ", i, exp(iniProb[i]));
-        }
-        printf("\n");
-        
         // E-step and M-step
         doEStep(Nstate, Nseq, Nobs, seqObs, gamma, xi, A, B, iniProb);    // update `gamma` and `xi`
         doMStep(Nstate, Nseq, Nobs, seqObs, gamma, xi, A, B, iniProb);    // update `A`, `B` and `iniProb`
         
-        printf("\n");
-        printf("parameters AFTER updating:\n");
-        for (int i = 0; i < Nstate; i++) {
-            for (int j = 0; j < Nstate; j++) {
-                printf("  A[%d][%d] = %lf  ", i, j, exp(A[i][j]));
-            }
-            printf("\n");
-        }
-        for (int i = 0; i < Nstate; i++) {
-            for (int v = 0; v < Nobs; v++) {
-                printf("  B[%d][%d] = %lf  ", i, v, exp(B[i][v]));
-            }
-            printf("\n");
-        }
-        for (int i = 0; i < Nstate; i++) {
-            printf("  iniProb[%d] = %lf  ", i, exp(iniProb[i]));
-        }
-        printf("\n\n");
-        
         // check convergence       
         double nowScore = likelihood(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
-        double diff = exp(prevScore) - exp(nowScore);
-        printf("check convergence:\n");
-        printf("  nowScore = %lf, prevScore = %lf, diff = %lf, tol = %lf\n", exp(nowScore), exp(prevScore), diff, tol);
-        printf("********** --------- **********\n\n");
+        double diff = nowScore - prevScore;
+        
+        if (verbose == 1) {
+            printf("   iter = %d --- previous_score = %lf  new_score = %lf\n", iter, prevScore, nowScore);
+            printf("                diff = %lf  tol = %lf  isconverge = %d\n", diff, tol, diff <= tol);
+            printf("                iniProb[0]=%lf, iniProb[1]=%lf\n", exp(iniProb[0]), exp(iniProb[1]));
+        }
+        
         if (diff <= tol) 
             break;
-            //printf("");
         else
             prevScore = nowScore;
     }
+    
+    if (verbose == 1)
+        printf("   ================================================================  \n\n\n");
     
     // free memory and return
     for (int t = 0; t < Nseq; t++) {
@@ -190,8 +161,71 @@ HMM learning(int Nstate, int Nseq, int Nobs, int *seqObs, HMM firstGuess, int ma
     }
     free(xi);
     
-    printf("\n\n\n");
-    
     HMM result = {iniProb, A, B};
     return result;
+}
+
+
+HMM randomInitParams(int Nstate, int Nseq, int Nobs, int seed) {
+    srand(seed);    // initialize `runif()`
+    
+    // initialize `iniProb`
+    double *iniProb = malloc(Nstate * sizeof(double));
+    
+    double cumsum = 0.;
+    for (int i = 0; i < Nstate-1; i++) {
+        iniProb[i] = runif(0, 1-cumsum);
+        cumsum += iniProb[i];
+    }
+    iniProb[Nstate-1] = 1. - cumsum;
+    
+    // initialize `A`
+    double **A = malloc(Nstate * sizeof(double*));
+    for (int i = 0; i < Nstate; i++) {
+        A[i] = malloc(Nstate * sizeof(double));
+    }
+    
+    for (int i = 0; i < Nstate; i++) {
+        cumsum = 0.;
+        for (int j = 0; j < Nstate-1; j++) {
+            A[i][j] = runif(0, 1-cumsum);
+            cumsum += A[i][j];
+        }
+        A[i][Nstate-1] = 1. - cumsum;
+    }
+    
+    // initialize `B`
+    double **B = malloc(Nstate * sizeof(double*));
+    for (int i = 0; i < Nstate; i++) {
+        B[i] = malloc(Nobs * sizeof(double));
+    }
+    
+    for (int i = 0; i < Nstate; i++) {
+        cumsum = 0.;
+        for (int j = 0; j < Nobs-1; j++) {
+            B[i][j] = runif(0, 1-cumsum);
+            cumsum += B[i][j];
+        }
+        B[i][Nobs-1] = 1. - cumsum;
+    }
+    
+    // convert to log scale
+    for (int i = 0; i < Nstate; i++) {
+        iniProb[i] = log(iniProb[i]);
+    }
+    
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            A[i][j] = log(A[i][j]);
+        }
+    }
+    
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nobs; j++) {
+            B[i][j] = log(B[i][j]);
+        }
+    }
+    
+    HMM firstGuess = {iniProb, A, B};
+    return firstGuess;
 }

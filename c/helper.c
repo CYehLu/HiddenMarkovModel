@@ -126,14 +126,14 @@ double** calcBeta(int Nstate, int Nseq, int Nobs, int *seqObs, double **A, doubl
     
     // initialization step
     for (int s = 0; s < Nstate; s++) {
-        beta[Nseq-1][s] = 1.;
+        beta[Nseq-1][s] = log(1.);
     }
     
     // recursion step
     for (int t = Nseq-2; t >= 0; t--) {
         for (int s = 0; s < Nstate; s++) {
             
-            // beta[t][s] = sum_s2(A[t][s2] * B[s2][seqObs[t+1]] * beta[t+1][s2]);
+            // beta[t][s] = sum_s2(A[s][s2] * B[s2][seqObs[t+1]] * beta[t+1][s2]);
             double tmp = mulProbLog(A[s][0], B[0][seqObs[t+1]]);
             beta[t][s] = mulProbLog(tmp, beta[t+1][0]);
             for (int s2 = 1; s2 < Nstate; s2++) {
@@ -156,6 +156,27 @@ void doEStep(int Nstate, int Nseq, int Nobs, int *seqObs, double **gamma, double
     
     double **alpha = calcAlpha(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
     double **beta = calcBeta(Nstate, Nseq, Nobs, seqObs, A, B);
+    
+    /*
+    printf("\n >>> In E step <<<\n");
+    printf(" alpha = \n");
+    for (int t = 0; t < Nseq; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            printf("   alpha[t=%d][i=%d] = %lf  ", t, i, exp(alpha[t][i]));
+        }
+        printf("\n");
+    }
+    printf("\n");
+    
+    printf(" beta = \n");
+    for (int t = 0; t < Nseq; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            printf("   beta[t=%d][i=%d] = %lf  ", t, i, exp(beta[t][i]));
+        }
+        printf("\n");
+    }
+    printf("\n");
+    */
     
     // norm[t] = sum_j(alpha[t][j] * beta[t][j])
     double norm[Nseq];
@@ -187,6 +208,155 @@ void doEStep(int Nstate, int Nseq, int Nobs, int *seqObs, double **gamma, double
         }
     }
     
+    /*
+    printf(" gamma = \n");
+    for (int t = 0; t < Nseq; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            printf("   gamma[t=%d][i=%d] = %lf  ", t, i, exp(gamma[t][i]));
+        }
+        printf("\n");
+    }
+    printf("\n");
+    
+    printf(" xi = \n");
+    for (int t = 0; t < Nseq-1; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            for (int j = 0; j < Nstate; j++) {
+                printf("   xi[t=%d][i=%d][j=%d] = %lf  ", t, i, j, exp(xi[t][i][j]));
+            }
+            printf("\n");
+        }
+        printf("   -----\n");
+    }    
+    printf(" >>> End E step <<<\n");
+    */
+    
+    
+    // free memory
+    for (int i = 0; i < Nstate; i++) {
+        free(alpha[i]);
+        free(beta[i]);
+    }
+    free(alpha);
+    free(beta);
+}
+
+
+void doEStep_old(int Nstate, int Nseq, int Nobs, int *seqObs, double **gamma, double ***xi, double **A, double **B, double *iniProb) {
+    /*
+    Update `gamma` and `xi`
+    */
+    
+    double **alpha = calcAlpha(Nstate, Nseq, Nobs, seqObs, A, B, iniProb);
+    double **beta = calcBeta(Nstate, Nseq, Nobs, seqObs, A, B);
+    
+    /*
+    printf("\n >>> In E step <<<\n");
+    if (Nseq <= 10) {
+        printf(" alpha = \n");
+        for (int t = 0; t < Nseq; t++) {
+            for (int i = 0; i < Nstate; i++) {
+                printf("   alpha[t=%d][i=%d] = %lf  ", t, i, exp(alpha[t][i]));
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+        printf(" beta = \n");
+        for (int t = 0; t < Nseq; t++) {
+            for (int i = 0; i < Nstate; i++) {
+                printf("   beta[t=%d][i=%d] = %lf  ", t, i, exp(beta[t][i]));
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+    */
+    
+    // norm[t] = sum_j(alpha[t][j] * beta[t][j])
+    double norm[Nseq];
+    for (int t = 0; t < Nseq; t++) {
+        norm[t] = mulProbLog(alpha[t][0], beta[t][0]);
+        for (int j = 1; j < Nstate; j++) {
+            double tmp = mulProbLog(alpha[t][j], beta[t][j]);
+            norm[t] = addProbLog(norm[t], tmp);
+        }
+    }
+    
+    // update `gamma`: numerator of gamma[t][i] = alpha[t][i] * beta[t][i] 
+    for (int t = 0; t < Nseq; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            gamma[t][i] = mulProbLog(alpha[t][i], beta[t][i]);
+        }
+    }
+    
+    // normalze `gamma`
+    for (int t = 0; t < Nseq; t++) {
+        
+        double norm = log(0.);
+        for (int i = 0; i < Nstate; i++) {
+            norm = addProbLog(norm, gamma[t][i]);
+        }
+        
+        for (int i = 0; i < Nstate; i++) {
+            gamma[t][i] = divProbLog(gamma[t][i], norm);
+        }
+    }
+    
+    // update `xi`: numerator of xi[t][i][j] = alpha[t][i] * A[i][j] * B[j][seqObs[t+1]] * beta[t+1][j]
+    for (int t = 0; t < Nseq-1; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            for (int j = 0; j < Nstate; j++) {
+                double term1 = mulProbLog(alpha[t][i], A[i][j]);
+                double term2 = mulProbLog(B[j][seqObs[t+1]], beta[t+1][j]);
+                xi[t][i][j] = mulProbLog(term1, term2);
+            }
+        }
+    }
+    
+    // normalize `xi`
+    for (int t = 0; t < Nseq-1; t++) {
+        
+        double norm = log(0.);
+        for (int i = 0; i < Nstate; i++) {
+            for (int j = 0; j < Nstate; j++) {
+                norm = addProbLog(norm, xi[t][i][j]);
+            }
+        }
+        
+        for (int i = 0; i < Nstate; i++) {
+            for (int j = 0; j < Nstate; j++) {
+                xi[t][i][j] = divProbLog(xi[t][i][j], norm);
+            }
+        }
+    }
+    
+    /*
+    if (Nseq <= 10) {
+        printf(" gamma = \n");
+        for (int t = 0; t < Nseq; t++) {
+            for (int i = 0; i < Nstate; i++) {
+                printf("   gamma[t=%d][i=%d] = %lf  ", t, i, exp(gamma[t][i]));
+            }
+            printf("\n");
+        }
+        printf("\n");
+
+        printf(" xi = \n");
+        for (int t = 0; t < Nseq-1; t++) {
+            for (int i = 0; i < Nstate; i++) {
+                for (int j = 0; j < Nstate; j++) {
+                    printf("   xi[t=%d][i=%d][j=%d] = %lf  ", t, i, j, exp(xi[t][i][j]));
+                }
+                printf("\n");
+            }
+            printf("   -----\n");
+        }    
+    }
+    printf(" >>> End E step <<<\n");
+    */
+    
+    
     // free memory
     for (int i = 0; i < Nstate; i++) {
         free(alpha[i]);
@@ -207,11 +377,11 @@ void doMStep(int Nstate, int Nseq, int Nobs, int *seqObs, double **gamma, double
     double xiSumT[Nstate][Nstate];
     double xiSumTJ[Nstate];
     
-    // initialize `xiSumT` and `xiSumTJ`
+    // initialize `xiSumT` and `xiSumTJ` as 0.
     for (int i = 0; i < Nstate; i++) {
-        xiSumTJ[i] = 0.;
+        xiSumTJ[i] = log(0.);
         for (int j = 0; j < Nstate; j++) {
-            xiSumT[i][j] = 0.;
+            xiSumT[i][j] = log(0.);
         }
     }
     
@@ -247,9 +417,94 @@ void doMStep(int Nstate, int Nseq, int Nobs, int *seqObs, double **gamma, double
     
     // initialize `numerator` and `denominator`
     for (int j = 0; j < Nstate; j++) {
-        denominator[j] = 0.;
+        denominator[j] = log(0.);
         for (int v = 0; v < Nobs; v++) {
-            numerator[j][v] = 0.;
+            numerator[j][v] = log(0.);
+        }
+    }
+    
+    // numerator[j][v] = sum_t(gamma[t][j]) s.t. seqObs[t] == v
+    for (int t = 0; t < Nseq; t++) {
+        for (int j = 0; j < Nstate; j++) {
+            for (int v = 0; v < Nobs; v++) {
+                if (seqObs[t] == v)
+                    numerator[j][v] = addProbLog(numerator[j][v], gamma[t][j]);
+            }
+        }
+    }
+    
+    // denominator[j] = sum_t(gamma[t][j])
+    for (int t = 0; t < Nseq; t++) {
+        for (int j = 0; j < Nstate; j++) {
+            denominator[j] = addProbLog(denominator[j], gamma[t][j]);
+        }
+    }
+    
+    // B[j][v] = numerator[j][v] / denominator[j]
+    for (int j = 0; j < Nstate; j++) {
+        for (int v = 0; v < Nobs; v++) {
+            B[j][v] = divProbLog(numerator[j][v], denominator[j]);
+        }
+    }
+    
+    // 3. update `iniProb`
+    for (int j = 0; j < Nstate; j++) {
+        iniProb[j] = gamma[0][j];
+    }
+}
+
+
+void doMStep_old(int Nstate, int Nseq, int Nobs, int *seqObs, double **gamma, double ***xi, double **A, double **B, double *iniProb) {
+    /*
+    Update `iniProb`, `A` and `B`
+    */
+    
+    // 1. update `A`
+    
+    double xiSumT[Nstate][Nstate];
+    double gammaSumT[Nstate];
+    
+    // initialize `xiSumT` and `gammaSumT` as 0.
+    for (int i = 0; i < Nstate; i++) {
+        gammaSumT[i] = log(0.);
+        for (int j = 0; j < Nstate; j++) {
+            xiSumT[i][j] = log(0.);
+        }
+    }
+    
+    // xiSumT[i][j] = sum_t(xi[t][i][j])
+    for (int t = 0; t < Nseq-1; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            for (int j = 0; j < Nstate; j++) {
+                xiSumT[i][j] = addProbLog(xiSumT[i][j], xi[t][i][j]);
+            }
+        }
+    }
+    
+    // gammaSumT[i] = sum_t(gamma[t][i])
+    for (int t = 0; t < Nseq-1; t++) {
+        for (int i = 0; i < Nstate; i++) {
+            gammaSumT[i] = addProbLog(gammaSumT[i], gamma[t][i]);
+        }
+    }
+    
+    // A[i][j] = xiSumT[i][j] / gammaSumT[i]
+    for (int i = 0; i < Nstate; i++) {
+        for (int j = 0; j < Nstate; j++) {
+            A[i][j] = divProbLog(xiSumT[i][j], gammaSumT[i]);
+        }
+    }
+    
+    // 2. update `B`
+    
+    double numerator[Nstate][Nobs];
+    double denominator[Nstate];
+    
+    // initialize `numerator` and `denominator`
+    for (int j = 0; j < Nstate; j++) {
+        denominator[j] = log(0.);
+        for (int v = 0; v < Nobs; v++) {
+            numerator[j][v] = log(0.);
         }
     }
     
