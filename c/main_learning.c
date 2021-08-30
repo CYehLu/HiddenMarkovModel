@@ -50,7 +50,7 @@ int main(void) {
     // iteration settings
     int maxiter = 100;       // maximum number of iteration
     double tol = 1e-4;       // stop iteration if log-likelihood increment is lower than `tol`
-    int verbose = 1;         // display iteration history
+    int verbose = 0;         // display iteration history
     
     // start learning
     HMM estHMM = learning(Nstate, Nseq, Nobs, seqObs, firstGuess, maxiter, tol, verbose);
@@ -62,6 +62,8 @@ int main(void) {
     printf("Parameter = estimated value (true value)\n");
     printf("----------------------------------------\n");
     showParams(Nstate, Nobs, estHMM, trueHMM);
+    printf("----------------------------------------\n\n");
+    printf("log-likelihood = %lf\n", likelihood(Nstate, Nseq, Nobs, seqObs, estHMM.A, estHMM.B, estHMM.iniProb));
     
     return 0;
 }
