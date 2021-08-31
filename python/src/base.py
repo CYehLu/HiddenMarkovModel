@@ -35,7 +35,6 @@ class Prob:
     def __radd__(self, other):
         """
         self.__radd__(), self.__iter__(), self.__next__() are defined for `sum()`
-        And only consider 1-d case
         """
         if other == 0:
             return self
@@ -63,3 +62,15 @@ class Prob:
                 return Prob(logval=self.logval[self._index])
         else:
             raise StopIteration
+            
+    def max(self):
+        return np.max(self.logval)
+    
+    def argmax(self):
+        return np.argmax(self.logval)
+    
+    def reshape(self, *args):
+        return Prob(logval=self.logval.reshape(*args))
+    
+    def transpose(self):
+        return Prob(logval=self.logval.T)
