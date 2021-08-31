@@ -1,4 +1,4 @@
-// gcc main_simulate.c hmm.o -std=c99 -o simulate
+// gcc simulate.c ../src/hmm.o ../src/helper.o -I../src/ -std=c99 -lm -o simulate
 
 #include <stdlib.h>
 #include <stdio.h>

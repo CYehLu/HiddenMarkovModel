@@ -1,4 +1,4 @@
-// gcc main_likelihood.c hmm.o -std=c99 -lm
+// gcc likelihood.c ../src/hmm.o ../src/helper.o -I../src/ -std=c99 -lm -o likelihood
 
 #include <stdlib.h>
 #include <stdio.h>

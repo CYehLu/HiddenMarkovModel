@@ -1,4 +1,4 @@
-// gcc main_learning.c hmm.o -std=c99 -o learning
+// gcc learning.c ../src/hmm.o ../src/helper.o -I../src/ -std=c99 -lm -o learning
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -1,4 +1,4 @@
-// gcc main_decoding.c hmm.o -std=c99 -lm
+// gcc decoding.c ../src/hmm.o ../src/helper.o -I../src/ -std=c99 -lm -o decoding
 
 #include <stdlib.h>
 #include <stdio.h>

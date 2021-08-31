@@ -1,4 +1,7 @@
 import numpy as np
+
+import sys
+sys.path.append('../src')
 from hmm import HiddenMarkovModel
 
 
@@ -15,9 +18,7 @@ if __name__ == '__main__':
         [0.5, 0.4, 0.1]
     ])
 
-    seq_obs, seq_state = hmm.simulate(nseq=30)
+    seq_obs = np.array([2, 0, 2])
+    ans = hmm.likelihood(seq_obs)
     
-    print('Simulated sequence of observations:')
-    print(seq_obs)
-    print('Simulated sequence of hidden states:')
-    print(seq_state)
+    print(f'log-likelihood = {ans}')
